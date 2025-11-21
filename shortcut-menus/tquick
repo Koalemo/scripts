@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+
+set -x
+
+selected() { \
+    choice=$(
+        echo -e "$( /bin/cat $TMUX_HOME/resurrect/saved_sessions.tmux |\ awk '{print \$2}' |\ awk '!/^([0-9]$|loca\/bin)/' |\ uniq |\ sort -u |\ fzf --reverse --header remove-session |\ dmenu -c -l 5 -i -p "Recreate saved session:" ) "
+    )
+
+
+}
+
+start() { \
+    /usr/bin/setsid -f "st" -e $TMUX_HOME/plugins/tmux-resurrect/scripts/restore-session.sh selected
+}
+
+start
