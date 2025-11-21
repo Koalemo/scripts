@@ -2,16 +2,38 @@
 
 set -x
 
+source "$TMUX_HOME/plugins/tmux-resurrect/scripts/variables.sh"
+source "$TMUX_HOME/plugins/tmux-resurrect/scripts/helpers.sh"
+source "$TMUX_HOME/plugins/tmux-resurrect/scripts/process_restore_helpers.sh"
+source "$TMUX_HOME/plugins/tmux-resurrect/scripts/spinner_helpers.sh"
+
+newsession() { \
+    name="$(echo "" | dmenu -p "Enter a name: " <&-)" || exit 0
+    notify-send "Starting new session: $name"
+    setsid -f st -e tmux new -s $name >/dev/null 2>&1
+}
+
+restoresession() { \
+    local name=$1
+    # if the tmux server exists, create new session attac
+    tmux ls | grep "$name" && notify-send "Attaching to existing session $name" && { setsid -f st -e tmux new-session -t $name >/dev/null; return 0; }
+    # else recreate the chosen session
+    notify-send "Restoring session: $name -- ATTENTION: WIP"
+
+    tmux run-shell "$TMUX_HOME/plugins/tmux-resurrect/scripts/restore-session.sh $name"
+}
+
 selected() { \
-    choice=$(
-        echo -e "$( /bin/cat $TMUX_HOME/resurrect/saved_sessions.tmux |\ awk '{print \$2}' |\ awk '!/^([0-9]$|loca\/bin)/' |\ uniq |\ sort -u |\ fzf --reverse --header remove-session |\ dmenu -c -l 5 -i -p "Recreate saved session:" ) "
+    saved=$(
+        # cat $TMUX_HOME/resurrect/saved_sessions.tmux | awk '{print $2}' | awk '!/^([0-9]$|loca\/bin)/' | uniq | sort -u | fzf --reverse --header remove-session | dmenu -l 5 -i -p "Recreate saved session:"
+        cat $TMUX_HOME/resurrect/saved_sessions.tmux | awk '{print $2}' | awk '!/^([0-9]$|loca\/bin)/' | uniq | sort -u
     )
+    choice=$(echo -e "New\n$saved" | dmenu -l 5 -i -p "Recreate saved session:")
 
-
+    case $choice in
+        New) newsession ;;
+        *) restoresession $choice ;;
+    esac
 }
 
-start() { \
-    /usr/bin/setsid -f "st" -e $TMUX_HOME/plugins/tmux-resurrect/scripts/restore-session.sh selected
-}
-
-start
+selected
