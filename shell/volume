@@ -1,0 +1,36 @@
+#!/bin/env bash
+
+get() {
+  wpctl get-volume @DEFAULT_AUDIO_SINK@
+}
+
+inc() {
+  wpctl set-volume @DEFAULT_AUDIO_SINK@ $(bc <<< "0.01 * $1")+
+}
+
+dec() {
+  wpctl set-volume @DEFAULT_AUDIO_SINK@ $(bc <<< "0.01 * $1")-
+}
+
+set_pct() {
+  wpctl set-volume @DEFAULT_AUDIO_SINK@ $(bc <<< "0.01 * $1")
+
+}
+
+notify() {
+  # popup notification + update to dwmblock --> ID: 5
+  notify-send "Volume: $(get)" && pkill -RTMIN+5 dwmblocks
+}
+
+arg="$1"
+
+case "$arg" in
+--set) set_pct "$2" && notify ;;
+--inc) inc "$2" && notify ;;
+--dec) dec "$2" && notify ;;
+--get) echo $(get) ;;
+*) echo "Unrecognized option '$*'" ;;
+esac
+
+
+
