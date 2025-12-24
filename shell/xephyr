@@ -1,3 +1,6 @@
-Xephyr -br -ac -screen 1600x900 :1 &
+
+notify-send "Xephyr: change DISPLAY number if it does not work"
+
+Xephyr -br -ac -noreset -screen 1600x900 :2 &
 sleep 1
-DISPLAY=:1 ~/code/dwm/dwm
+DISPLAY=:2 ~/code/dwm/dwm
