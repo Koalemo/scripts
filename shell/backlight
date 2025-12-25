@@ -45,12 +45,17 @@ dec() {
 	set_pct $((curr - $1))
 }
 
+notify() {
+  # popup notification + update to dwmblock --> ID: 6
+  pkill -RTMIN+6 dwmblocks
+}
+
 arg="$1"
 
 case "$arg" in
 --set) set_pct "$2" ;;
---inc) inc "$2" && notify-send "Brighness: $(get_pct)" ;;
---dec) dec "$2" && notify-send "Brighness: $(get_pct)" ;;
+--inc) inc "$2" && notify ;;
+--dec) dec "$2" && notify ;;
 --halve) set_pct $(($(get_pct) / 2)) ;;
 --double) set_pct $(($(get_pct) * 2)) ;;
 --get) echo $(get_pct) ;;

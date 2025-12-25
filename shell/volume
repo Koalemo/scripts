@@ -1,7 +1,8 @@
 #!/bin/env bash
 
 get() {
-  wpctl get-volume @DEFAULT_AUDIO_SINK@
+  # divide by 1 in the end to truncate decimals.
+  echo "$(wpctl get-volume @DEFAULT_AUDIO_SINK@ | sed -n 's/.*Volume:\ //p') * 100 / 1" | bc
 }
 
 inc() {
@@ -19,7 +20,8 @@ set_pct() {
 
 notify() {
   # popup notification + update to dwmblock --> ID: 5
-  notify-send "Volume: $(get)" && pkill -RTMIN+5 dwmblocks
+  #notify-send "Volume: $(get)" && pkill -RTMIN+5 dwmblocks
+  pkill -RTMIN+5 dwmblocks
 }
 
 arg="$1"
