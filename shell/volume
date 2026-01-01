@@ -1,21 +1,36 @@
 #!/bin/env bash
 
+limit=2.0
+
 get() {
   # divide by 1 in the end to truncate decimals.
-  echo "$(wpctl get-volume @DEFAULT_AUDIO_SINK@ | sed -n 's/.*Volume:\ //p') * 100 / 1" | bc
+  raw=$(wpctl get-volume @DEFAULT_AUDIO_SINK@)
+  pct=$(echo "$(echo "$raw" | sed 's/[^0-9.]//g') * 100 / $limit / 1" | bc)
+  case "$raw" in 
+    *"MUTED"*)
+      echo "$pct% MUTED"
+      ;;
+    *) 
+      echo "$pct%"
+      ;;
+  esac
 }
 
 inc() {
-  wpctl set-volume @DEFAULT_AUDIO_SINK@ $(bc <<< "0.01 * $1")+
+  wpctl set-volume @DEFAULT_AUDIO_SINK@ $(bc <<< "0.01 * $1")+  -l $limit
 }
 
 dec() {
-  wpctl set-volume @DEFAULT_AUDIO_SINK@ $(bc <<< "0.01 * $1")-
+  wpctl set-volume @DEFAULT_AUDIO_SINK@ $(bc <<< "0.01 * $1")- -l $limit
 }
 
 set_pct() {
-  wpctl set-volume @DEFAULT_AUDIO_SINK@ $(bc <<< "0.01 * $1")
+  wpctl set-volume @DEFAULT_AUDIO_SINK@ $(bc <<< "0.01 * $1") -l $limit
 
+}
+
+mute() {
+  amixer set Master toggle
 }
 
 notify() {
@@ -30,6 +45,7 @@ case "$arg" in
 --set) set_pct "$2" && notify ;;
 --inc) inc "$2" && notify ;;
 --dec) dec "$2" && notify ;;
+--mute) mute && notify ;;
 --get) echo $(get) ;;
 *) echo "Unrecognized option '$*'" ;;
 esac
