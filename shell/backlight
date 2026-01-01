@@ -46,7 +46,7 @@ dec() {
 }
 
 notify() {
-  # popup notification + update to dwmblock --> ID: 6
+  # popup notification + update to dwmblock --> ID: 5
   pkill -RTMIN+6 dwmblocks
 }
 
@@ -58,6 +58,6 @@ case "$arg" in
 --dec) dec "$2" && notify ;;
 --halve) set_pct $(($(get_pct) / 2)) ;;
 --double) set_pct $(($(get_pct) * 2)) ;;
---get) echo $(get_pct) ;;
+--get) echo $(get_pct)% ;;
 *) echo "Unrecognized option '$*'" ;;
 esac
