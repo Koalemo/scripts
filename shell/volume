@@ -17,15 +17,15 @@ get() {
 }
 
 inc() {
-  wpctl set-volume @DEFAULT_AUDIO_SINK@ $(bc <<< "0.01 * $1")+  -l $limit
+  wpctl set-volume @DEFAULT_AUDIO_SINK@ $(bc <<< "0.01 * $1 * $limit")+  -l $limit
 }
 
 dec() {
-  wpctl set-volume @DEFAULT_AUDIO_SINK@ $(bc <<< "0.01 * $1")- -l $limit
+  wpctl set-volume @DEFAULT_AUDIO_SINK@ $(bc <<< "0.01 * $1 * $limit")- -l $limit
 }
 
 set_pct() {
-  wpctl set-volume @DEFAULT_AUDIO_SINK@ $(bc <<< "0.01 * $1") -l $limit
+  wpctl set-volume @DEFAULT_AUDIO_SINK@ $(bc <<< "0.01 * $1 * $limit") -l $limit
 
 }
 
