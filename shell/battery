@@ -1,0 +1,14 @@
+#!/bin/env bash
+
+get() {
+  perc=$(echo "$(cat /sys/class/power_supply/BAT0/energy_now)*100 / $(cat /sys/class/power_supply/BAT0/energy_full)" | bc)
+  status=$(cat /sys/class/power_supply/BAT0/status)
+  echo "$perc% ${status^^}"
+}
+
+arg="$1"
+
+case "$arg" in
+--get) echo $(get) ;;
+*) echo "Unrecognized option '$*'" ;;
+esac
