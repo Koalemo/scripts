@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+
+set -x
+
+scan() {
+  bluetoothctl scan on
+  choice=$(bluetoothctl devices |  dmenu -l 5 -i -p "Detected Devices:")
+  notify-send "Selected: $choice"
+}
+
+#pair() {
+#
+#}
+#
+#unpair() {
+#
+#}
+#
+#connect(){
+#}
+
+what() {
+  choice=$(echo -e connect\disconnect\unpair)
+}
+
+scan
