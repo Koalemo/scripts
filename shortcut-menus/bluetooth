@@ -2,6 +2,15 @@
 
 set -x
 
+poweron() {
+  rfkill unblock bluetooth
+  notify-send "BT: $(bluetoothctl power on)"
+}
+
+poweroff() {
+  notify-send "BT: $(bluetoothctl power off)"
+  rfkill block bluetooth
+}
 
 discover() {
   trap cleanup SIGHUP SIGINT SIGQUIT SIGABRT SIGKILL SIGTERM
@@ -29,7 +38,7 @@ cleanup() {
   for file in /tmp/bt.script.procs.*; do
     pid=$(echo $file | sed 's/[^0-9]*//g')
     if [ "$pid" != $$ ]; then
-      notify-send "Killing PID $pid"
+      notify-send "BT: [cleanup] Killing PID $pid"
       rm $file
       kill -9 $pid 
     fi
@@ -38,27 +47,12 @@ cleanup() {
   rm /tmp/bt.script.procs.$$
 }
 
-disconnect() {
-  choice=$(echo -e "$(list connected)\nCancel" | dmenu -l 5 -i -p "Chose device")
-  case $choice in
-    Cancel) cleanup && exit ;;
-    *) break ;;
-  esac
-
-  mac=$(echo $choice | cut -d' ' -f2)
-  
-  echo -e "disconnect $mac\n" | bluetoothctl | xargs -I {} notify-send {};
-}
-
-#trust() {
-#
-#}
-
-connect() {
+process() {
   poweron
   coproc dscvr { discover; }
   touch /tmp/bt.script.procs.$dscvr_PID
 
+  # chose a device
   while true; do
     sleep 1
     choice=$(echo -e "Refresh\n$(list | sort -d)\nCancel" | dmenu -l 5 -i -p "Chose device")
@@ -68,19 +62,23 @@ connect() {
       *) break ;;
     esac
   done
-
-  notify-send "choice: $choice"
+  # DEBUG
+  # notify-send "choice: $choice"
+  
+  # get back the MAC address
   echo -e "$choice" | cut -d'-' -f2
   while read line; do
     if echo -e $line | grep "$(echo -e "$choice" | cut -d'-' -f2)"; then
-      notify-send "dings: $line"
       mac=$(echo $line | cut -d' ' -f2)
 
     fi
   done <<< "$(bluetoothctl devices)"
+  # DEBUG
+  # notify-send "mac: $mac"
 
-  notify-send "mac: $mac"
 
+  # get process file descriptor
+  #
   # TODO: fix.
   # Hack to get the pid of bluetoothctl. better extract from filename without the loop?
   for f in /tmp/bt.script.procs.ctl.*; do
@@ -88,26 +86,11 @@ connect() {
     echo $ctlpid
   done
 
-  echo -e "pair $mac\nconnect $mac" >&/proc/$ctlpid/fd/0
+  # Issue the processing command
+  echo -e "$1 $mac" >&/proc/$ctlpid/fd/0
   sleep 15
 
   cleanup
-}
-
-
-poweron() {
-  rfkill unblock bluetooth
-  notify-send "BT: $(bluetoothctl power on)"
-}
-
-poweroff() {
-  notify-send "BT: $(bluetoothctl power off)"
-  rfkill block bluetooth
-}
-
-pair() {
-  notify-send "blub"
-
 }
 
 list () {
@@ -165,31 +148,21 @@ list () {
   echo -e "$all"
 }
 
-#unpair() {
-#
-#}
-#
-#connect(){
-#}
-
 what() {
-  choice=$(echo -e "power on\npower off\nconnect\ndisconnect\ntrust\nunpair\ndiscover\nclean up" | dmenu -i -l 6 -p "Bluetooth Action: ")
+  choice=$(echo -e "power on\npower off\nconnect\ndisconnect\ntrust\nunpair\ndiscover\nclean up" | dmenu -i -l 10 -p "Bluetooth Action: ")
 
   case $choice in
     power\ on) poweron ;;
     power\ off) poweroff ;;
-    connect) connect ;;
-    disconnect) disconnect ;; 
-    trust) trust ;;
-    unpair) unpair ;;
+    connect) process "connect" ;;
+    disconnect) process "disconnect" ;; 
+    trust) process "trust" ;;
+    pair) process "pair" ;;
+    unpair) process "remove" ;;
     clean\ up) cleanup ;;
     discover) discover ;;
     *) exit ;;
   esac
 }
 
-#connect
-##what
-#discover
-#main $@
 what
