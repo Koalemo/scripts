@@ -58,6 +58,7 @@ connect() {
   poweron
   coproc dscvr { discover; }
   touch /tmp/bt.script.procs.$dscvr_PID
+
   while true; do
     sleep 1
     choice=$(echo -e "Refresh\n$(list | sort -d)\nCancel" | dmenu -l 5 -i -p "Chose device")
@@ -73,15 +74,26 @@ connect() {
   while read line; do
     if echo -e $line | grep "$(echo -e "$choice" | cut -d'-' -f2)"; then
       notify-send "dings: $line"
+      mac=$(echo $line | cut -d' ' -f2)
+
     fi
   done <<< "$(bluetoothctl devices)"
-  mac=$(echo $line | cut -d' ' -f2)
 
   notify-send "mac: $mac"
-  echo -e "pair $mac\nconnect $mac" | bluetoothctl  
+
+  # TODO: fix.
+  # Hack to get the pid of bluetoothctl. better extract from filename without the loop?
+  for f in /tmp/bt.script.procs.ctl.*; do
+    ctlpid=$(echo "$f" | sed 's/\/tmp\/bt.script.procs.ctl.//g')
+    echo $ctlpid
+  done
+
+  echo -e "pair $mac\nconnect $mac" >&/proc/$ctlpid/fd/0
+  sleep 15
 
   cleanup
 }
+
 
 poweron() {
   rfkill unblock bluetooth
@@ -112,7 +124,6 @@ list () {
 
   out=""
 
-
   # This does not work because iterates words
   # for d in $paired; do
   #
@@ -130,7 +141,6 @@ list () {
       fi
     fi
   done <<< "$connected"
-
 
   while read line; do
     mac="$(echo $line | cut -d' ' -f2)"                                          
