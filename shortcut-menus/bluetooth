@@ -2,16 +2,159 @@
 
 set -x
 
+
 discover() {
-  bluetoothctl scan on
-  choice=$(bluetoothctl devices |  dmenu -l 5 -i -p "Detected Devices:")
-  notify-send "Selected: $choice"
+  trap cleanup SIGHUP SIGINT SIGQUIT SIGABRT SIGKILL SIGTERM
+  # the discover task may be spawned headless.
+  # save the PID of this execution in the tmp filename. 
+  # used to kill all running procs in `cleanup.
+  touch /tmp/bt.script.procs.$$
+
+  # spawn bluetoothctl and also record it's pid.
+  coproc btctl { bluetoothctl > /tmp/btctl.out; } 
+  touch /tmp/bt.script.procs.ctl.$btctl_PID
+  #sleep 1
+  #notify-send "PID of btctl: ${btctl_PID}"
+
+  # Issue command to coproc
+  echo -e "scan on" >&${btctl[1]}
+
+  # pipe the output of the coproc to notify-send
+  # Caution: runs forever, until the script is terminated or cleanup is called.
+  # sed -u: unbuffered.
+  tail -f /tmp/btctl.out | grep --line-buffered NEW |  sed -u "s/.*Device\ [^\ ]*\ //g" | sed -u "s/^/BT: Device discovered: /g" | xargs -I {} notify-send {}; 
 }
 
-#pair() {
+cleanup() {
+  for file in /tmp/bt.script.procs.*; do
+    pid=$(echo $file | sed 's/[^0-9]*//g')
+    if [ "$pid" != $$ ]; then
+      notify-send "Killing PID $pid"
+      rm $file
+      kill -9 $pid 
+    fi
+  done;
+  rm /tmp/btctl.out
+  rm /tmp/bt.script.procs.$$
+}
+
+disconnect() {
+  choice=$(echo -e "$(list connected)\nCancel" | dmenu -l 5 -i -p "Chose device")
+  case $choice in
+    Cancel) cleanup && exit ;;
+    *) break ;;
+  esac
+
+  mac=$(echo $choice | cut -d' ' -f2)
+  
+  echo -e "disconnect $mac\n" | bluetoothctl | xargs -I {} notify-send {};
+}
+
+#trust() {
 #
 #}
-#
+
+connect() {
+  poweron
+  coproc dscvr { discover; }
+  touch /tmp/bt.script.procs.$dscvr_PID
+  while true; do
+    sleep 1
+    choice=$(echo -e "Refresh\n$(list | sort -d)\nCancel" | dmenu -l 5 -i -p "Chose device")
+    case $choice in
+      Refresh) continue ;;
+      Cancel) cleanup && exit ;;
+      *) break ;;
+    esac
+  done
+
+  notify-send "choice: $choice"
+  echo -e "$choice" | cut -d'-' -f2
+  while read line; do
+    if echo -e $line | grep "$(echo -e "$choice" | cut -d'-' -f2)"; then
+      notify-send "dings: $line"
+    fi
+  done <<< "$(bluetoothctl devices)"
+  mac=$(echo $line | cut -d' ' -f2)
+
+  notify-send "mac: $mac"
+  echo -e "pair $mac\nconnect $mac" | bluetoothctl  
+
+  cleanup
+}
+
+poweron() {
+  rfkill unblock bluetooth
+  notify-send "BT: $(bluetoothctl power on)"
+}
+
+poweroff() {
+  notify-send "BT: $(bluetoothctl power off)"
+  rfkill block bluetooth
+}
+
+pair() {
+  notify-send "blub"
+
+}
+
+list () {
+  case $1 in 
+    connected) echo -e "$(bluetoothctl devices Connected)" && return ;;
+    paired) echo -e "$(bluetoothctl devices Paired)" && return ;;
+    trusted) echo  -e "$(bluetoothctl devices Trusted)" && return ;;
+    *) ;;
+  esac
+  connected="$(list connected)"
+  paired="$(list paired)"
+  trusted="$(list trusted)"
+  all="$(bluetoothctl devices)"
+
+  out=""
+
+
+  # This does not work because iterates words
+  # for d in $paired; do
+  #
+  # This does not work because executed in subshell  when piping to read line
+  # pattern: echo -e $lines | while read -r line
+
+  # REF: https://www.baeldung.com/linux/while-loop-variable-scope
+  # echo "$paired" | while IFS= read -r line; do
+
+  while read line; do
+    mac="$(echo $line | cut -d' ' -f2)"
+    if [[ -n "$mac" ]]; then
+      if echo -e "$all" | grep -q "$mac"; then
+        all="$(echo -e "$all" | sed "s/.*Device $mac/CONNECTED -/g")"
+      fi
+    fi
+  done <<< "$connected"
+
+
+  while read line; do
+    mac="$(echo $line | cut -d' ' -f2)"                                          
+    if [[ -n "$mac" ]]; then
+      if echo -e "$all" | grep -q "$mac"; then
+        all="$(echo -e "$all" | sed "s/.*Device $mac/TRUSTED   -/g")"
+      fi
+    fi
+  done <<< "$trusted"
+
+  while read line; do
+    mac="$(echo $line | cut -d' ' -f2)"                                           
+    if [[ -n "$mac" ]]; then
+      if echo -e "$all" | grep -q "$mac"; then
+        all="$(echo -e "$all" | sed "s/.*Device $mac/PAIRED    -/g")"
+      fi
+    fi
+  done <<< "$paired"
+
+                                        
+  all="$(echo -e "$all" |           sed "s/^Device [:0-9A-Z]*/VISIBLE   -/g")" 
+  echo -e "$all"
+}
+
 #unpair() {
 #
 #}
@@ -20,19 +163,23 @@ discover() {
 #}
 
 what() {
-  rfkill unblock bluetooth
-  choice=$(echo -e "power on\npower off\ndiscover\nconnect\ndisconnect\ntrust\npair\nunpair" | dmenu -i -l 6 -p "Bluetooth Action: ")
+  choice=$(echo -e "power on\npower off\nconnect\ndisconnect\ntrust\nunpair\ndiscover\nclean up" | dmenu -i -l 6 -p "Bluetooth Action: ")
 
   case $choice in
-    power on) poweron ;;
-    power off) poweroff ;;
-    discover) discover ;;
+    power\ on) poweron ;;
+    power\ off) poweroff ;;
     connect) connect ;;
     disconnect) disconnect ;; 
-    unpair) unpair ;;
     trust) trust ;;
+    unpair) unpair ;;
+    clean\ up) cleanup ;;
+    discover) discover ;;
     *) exit ;;
   esac
 }
 
+#connect
+##what
+#discover
+#main $@
 what
