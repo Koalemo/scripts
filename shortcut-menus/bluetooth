@@ -2,7 +2,7 @@
 
 set -x
 
-scan() {
+discover() {
   bluetoothctl scan on
   choice=$(bluetoothctl devices |  dmenu -l 5 -i -p "Detected Devices:")
   notify-send "Selected: $choice"
@@ -20,7 +20,19 @@ scan() {
 #}
 
 what() {
-  choice=$(echo -e connect\disconnect\unpair)
+  rfkill unblock bluetooth
+  choice=$(echo -e "power on\npower off\ndiscover\nconnect\ndisconnect\ntrust\npair\nunpair" | dmenu -i -l 6 -p "Bluetooth Action: ")
+
+  case $choice in
+    power on) poweron ;;
+    power off) poweroff ;;
+    discover) discover ;;
+    connect) connect ;;
+    disconnect) disconnect ;; 
+    unpair) unpair ;;
+    trust) trust ;;
+    *) exit ;;
+  esac
 }
 
-scan
+what
