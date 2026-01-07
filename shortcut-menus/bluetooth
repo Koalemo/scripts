@@ -55,7 +55,7 @@ process() {
   # chose a device
   while true; do
     sleep 1
-    choice=$(echo -e "Refresh\n$(list | sort -d)\nCancel" | dmenu -l 5 -i -p "Chose device")
+    choice=$(echo -e "Refresh\n$(list | sort -d)\nCancel" | dmenu -l 19 -i -p "Chose device")
     case $choice in
       Refresh) continue ;;
       Cancel) cleanup && exit ;;
