@@ -1,0 +1,30 @@
+#! /bin/env bash
+
+set -x
+
+layouts="us\nde\nother"
+
+what() {
+  choice=$(echo -e "$layouts" | dmenu -i -l 10 -p "chose keyboard layout:")
+  case $choice in 
+    other) prompt ;;
+    *) set $choice ;;
+  esac
+}
+
+prompt() {
+  name="$(echo "" | dmenu -p "other layout: " <&-)" || exit 0
+  set $name
+}
+
+set() {
+  response=$(setxkbmap $1 2>&1)
+  if [ -n $response ]; then 
+    notify-send "Setting keymap: $1"
+  else
+    # reason for echo -e detour: notify-send ignores \n!
+    notify-send "$(echo -e "Setting keymap: $1 \n\n $response")"
+  fi
+}
+
+what
