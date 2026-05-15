@@ -1,6 +1,6 @@
 #!/bin/env bash
 
-backlight='/sys/class/backlight/nvidia_wmi_ec_backlight'
+backlight="/sys/class/backlight/$(ls /sys/class/backlight)"
 max_brightness=$(cat "$backlight/max_brightness")
 pct_per_nits=$((max_brightness / 100))
 
