@@ -20,10 +20,10 @@ prompt() {
 set() {
   response=$(setxkbmap $1 2>&1)
   if [ -n $response ]; then 
-    notify-send "Setting keymap: $1"
+    notify-send -t 5000 "Setting keymap: $1"
   else
     # reason for echo -e detour: notify-send ignores \n!
-    notify-send "$(echo -e "Setting keymap: $1 \n\n $response")"
+    notify-send -t 5000 "$(echo -e "Setting keymap: $1 \n\n $response")"
   fi
 }
 
