@@ -55,7 +55,7 @@ process() {
   # chose a device
   while true; do
     sleep 1
-    choice=$(echo -e "Refresh\n$(list | sort -d)\nCancel" | dmenu -l 19 -i -p "Chose device")
+    choice=$(echo -e "Refresh\n$(list | sort -d)\nCancel" | menu -l 19 -i -p "Chose device")
     case $choice in
       Refresh) continue ;;
       Cancel) cleanup && exit ;;
@@ -149,7 +149,7 @@ list () {
 }
 
 what() {
-  choice=$(echo -e "power on\npower off\nconnect\ndisconnect\ntrust\nunpair\ndiscover\nclean up" | dmenu -i -l 10 -p "Bluetooth Action: ")
+  choice=$(echo -e "power on\npower off\nconnect\ndisconnect\ntrust\nunpair\ndiscover\nclean up" | menu -i -l 10 -p "Bluetooth Action: ")
 
   case $choice in
     power\ on) poweron ;;
