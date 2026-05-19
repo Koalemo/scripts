@@ -5,7 +5,7 @@ set -x
 layouts="us\nde\nother"
 
 what() {
-  choice=$(echo -e "$layouts" | dmenu -i -l 10 -p "chose keyboard layout:")
+  choice=$(echo -e "$layouts" | $menu -i -l 10 -p "chose keyboard layout:")
   case $choice in 
     other) prompt ;;
     *) set $choice ;;
@@ -13,7 +13,7 @@ what() {
 }
 
 prompt() {
-  name="$(echo "" | dmenu -p "other layout: " <&-)" || exit 0
+  name="$(echo "" | $menu -p "other layout: " <&-)" || exit 0
   set $name
 }
 

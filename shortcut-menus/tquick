@@ -8,7 +8,7 @@ source "$TMUX_HOME/plugins/tmux-resurrect/scripts/process_restore_helpers.sh"
 source "$TMUX_HOME/plugins/tmux-resurrect/scripts/spinner_helpers.sh"
 
 newsession() { \
-    name="$(echo "" | dmenu -p "Enter a name: " <&-)" || exit 0
+    name="$(echo "" | $menu -p "Enter a name: " <&-)" || exit 0
     notify-send "Starting new session: $name"
     setsid -f st -e tmux new -s $name >/dev/null 2>&1
 }
@@ -25,10 +25,10 @@ restoresession() { \
 
 selected() { \
     saved=$(
-        # cat $TMUX_HOME/resurrect/saved_sessions.tmux | awk '{print $2}' | awk '!/^([0-9]$|loca\/bin)/' | uniq | sort -u | fzf --reverse --header remove-session | dmenu -l 5 -i -p "Recreate saved session:"
+        # cat $TMUX_HOME/resurrect/saved_sessions.tmux | awk '{print $2}' | awk '!/^([0-9]$|loca\/bin)/' | uniq | sort -u | fzf --reverse --header remove-session | $menu -l 5 -i -p "Recreate saved session:"
         cat $TMUX_HOME/resurrect/saved_sessions.tmux | awk '{print $2}' | awk '!/^([0-9]$|loca\/bin)/' | uniq | sort -u
     )
-    choice=$(echo -e "New\n$saved" | dmenu -l 5 -i -p "Recreate saved session:")
+    choice=$(echo -e "New\n$saved" | $menu -l 5 -i -p "Recreate saved session:")
 
     case $choice in
         New) newsession ;;
