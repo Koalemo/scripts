@@ -1,0 +1,45 @@
+#!/usr/bin/env bash
+
+set -x
+
+list () {
+  echo -e "$(nmcli -f IN-USE,SSID,RATE,BARS,SECURITY device wifi list | tail -n+2)" && return 
+}
+
+cleanup () {
+  return
+}
+
+what () {
+
+  choice=$(echo -e "enable\ndisable\nconnect\ncancel" | $menu -l 4 -i -p "Wifi Action:")
+  
+  process $choice
+
+  return
+}
+
+process () {
+
+  case $1 in 
+    enable) nmcli radio wifi on && notify-send -t 5000 "Wifi status: $(nmcli radio wifi)" && return ;;
+    disable) nmcli radio wifi off && notify-send -t 5000 "Wifi status: $(nmcli radio wifi)" && return ;;
+    connect) ;;
+    *) notify-send -t 5000 "Wifi status: $(nmcli radio wifi)" && return ;;
+  esac
+
+  
+  while true; do
+
+    choice=$(echo -e "$(list)\nrefresh\ncancel" | $menu -l 10 -i -p "Chose Network")
+    case $choice in 
+      refresh) continue ;;
+      *) break ;;
+      cancel) cleanup && exit ;;
+    esac
+  done
+  notify-send -t 5000 "choice: $choice"
+
+}
+
+what
