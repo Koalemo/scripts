@@ -37,7 +37,10 @@ process () {
       *) break ;;
       cancel) cleanup && exit ;;
     esac
+
+    nmcli device wifi connect $choice
   done
+
   notify-send -t 5000 "choice: $choice"
 
 }
