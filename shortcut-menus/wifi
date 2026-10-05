@@ -2,10 +2,6 @@
 
 set -x
 
-list () {
-  echo -e "$(nmcli -f IN-USE,SSID,RATE,BARS,SECURITY device wifi list | tail -n+2)" && return 
-}
-
 cleanup () {
   return
 }
@@ -13,7 +9,7 @@ cleanup () {
 what () {
 
   choice=$(echo -e "enable\ndisable\nconnect\ncancel" | $menu -l 4 -i -p "Wifi Action:")
-  
+
   process $choice
 
   return
@@ -21,28 +17,74 @@ what () {
 
 process () {
 
-  case $1 in 
+  case $1 in
     enable) nmcli radio wifi on && notify-send -t 5000 "Wifi status: $(nmcli radio wifi)" && return ;;
     disable) nmcli radio wifi off && notify-send -t 5000 "Wifi status: $(nmcli radio wifi)" && return ;;
     connect) ;;
     *) notify-send -t 5000 "Wifi status: $(nmcli radio wifi)" && return ;;
   esac
 
-  
+
   while true; do
 
-    choice=$(echo -e "$(list)\nrefresh\ncancel" | $menu -l 10 -i -p "Chose Network")
-    case $choice in 
+
+    list=$(echo -e "$(nmcli -f BSSID,SSID,RATE,BARS,SECURITY device wifi list | tail -n+2)")
+    choice=$(echo -e "$list\nrefresh\ncancel" | $menu -l 10 -i -p "Chose Network")
+    case $choice in
       refresh) continue ;;
-      *) break ;;
       cancel) cleanup && exit ;;
+      *) break ;;
     esac
 
-    nmcli device wifi connect $choice
   done
 
-  notify-send -t 5000 "choice: $choice"
+  bssid=$(echo "$choice" | sed -E 's/.*(([0-9A-Fa-f]{2}:){5}[[0-9A-Fa-f]{2}).*/\1/g')
 
+
+  notify-send -t 5000 "bssid: $bssid"
+  # try to connect with nothing; either we have the password already or this is an open network
+  nmcli device wifi connect $bssid && return
+
+  # else, ask for a password
+  pw=$($menu -p "Password required: " < /dev/null)
+
+  # We need to extract the SSID for nmcli to:
+
+  # Escape colons in the BSSID variable to match nmcli's escaped output
+  escaped_bssid=$(echo "$bssid" | sed 's/:/\\\\:/g')
+
+  # colon-delimitted list of the relevant info
+  expanded_list=$(nmcli -t -f BSSID,SSID,SECURITY device wifi list )
+
+  # extract SSID and security type using the selected BSSID
+  ssid=$(echo -e "$expanded_list" | sed -nE "s/.*${escaped_bssid}:([^:]+):([^:]+).*/\1/p")
+  security=$(echo -e "$expanded_list" | sed -nE "s/.*${escaped_bssid}:([^:]+):([^:]+).*/\2/p")
+  echo "Security: $security"
+
+
+  # construct connection and connect.
+  case "$security" in
+    *WPA3*|*SAE*) key_mgmt="sae" ;;
+    *WPA*|*WPA2*) key_mgmt="wpa-psk" ;;
+    *OWE*)        key_mgmt="owe" ;;
+    *802.1X*)     key_mgmt="wpa-eap" ;;
+    *)            key_mgmt="none" ;;
+  esac
+
+  # Delete existing profile if it exists to start clean
+  nmcli connection delete "$ssid" 2>/dev/null
+
+  # Add connection with explicit security key-mgmt set to wpa-psk
+  nmcli connection add type wifi con-name "$ssid" ssid "$ssid" \
+    802-11-wireless.bssid "$bssid" \
+    802-11-wireless-security.key-mgmt wpa-psk \
+    802-11-wireless-security.psk "$pw"
+
+  # Bring the connection up
+  nmcli connection up "$ssid" && return
+
+  # If we reach this go debug.
+  notify-send -t 5000 "Wifi: Failed to connect."
 }
 
 what
