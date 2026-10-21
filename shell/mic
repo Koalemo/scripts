@@ -1,0 +1,54 @@
+#!/bin/env bash
+
+limit=2.0
+
+get() {
+  # divide by 1 in the end to truncate decimals.
+  raw=$(wpctl get-volume @DEFAULT_AUDIO_SOURCE@)
+  pct=$(echo "$(echo "$raw" | sed 's/[^0-9.]//g') * 100 / $limit / 1" | bc)
+  case "$raw" in
+    *"MUTED"*)
+      echo "$pct% MUTED"
+      ;;
+    *)
+      echo "$pct%"
+      ;;
+  esac
+}
+
+inc() {
+  wpctl set-volume @DEFAULT_AUDIO_SOURCE@ $(bc <<< "0.01 * $1 * $limit")+  -l $limit
+}
+
+dec() {
+  wpctl set-volume @DEFAULT_AUDIO_SOURCE@ $(bc <<< "0.01 * $1 * $limit")- -l $limit
+}
+
+set_pct() {
+  wpctl set-volume @DEFAULT_AUDIO_SOURCE@ $(bc <<< "0.01 * $1 * $limit") -l $limit
+
+}
+
+mute() {
+  wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle
+}
+
+notify() {
+  # popup notification + update to dwmblock --> ID: 5
+  #notify-send "Volume: $(get)" && pkill -RTMIN+5 dwmblocks
+  pkill -RTMIN+5 dwmblocks
+}
+
+arg="$1"
+
+case "$arg" in
+--set) set_pct "$2" && notify ;;
+--inc) inc "$2" && notify ;;
+--dec) dec "$2" && notify ;;
+--mute) mute && notify ;;
+--get) echo $(get) ;;
+*) echo "Unrecognized option '$*'" ;;
+esac
+
+
+
