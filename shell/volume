@@ -6,11 +6,11 @@ get() {
   # divide by 1 in the end to truncate decimals.
   raw=$(wpctl get-volume @DEFAULT_AUDIO_SINK@)
   pct=$(echo "$(echo "$raw" | sed 's/[^0-9.]//g') * 100 / $limit / 1" | bc)
-  case "$raw" in 
+  case "$raw" in
     *"MUTED"*)
       echo "$pct% MUTED"
       ;;
-    *) 
+    *)
       echo "$pct%"
       ;;
   esac
@@ -30,7 +30,7 @@ set_pct() {
 }
 
 mute() {
-  amixer set Master toggle
+  wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle
 }
 
 notify() {
