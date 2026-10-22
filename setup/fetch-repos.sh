@@ -24,16 +24,18 @@ CALLER_ROOT=$(find_repo_root) || { echo "[fetch-repos] ERROR: could not find rep
 mkdir -p "$CALLER_ROOT/deps"
 
 ensure_tool() {
-    local name="$1" check_fn="$2" install_fn="$3"
+    local name="$1" check_fn="$2" install_fn="$3" describe_fn=$4
     if eval "$check_fn"; then
         echo "[fetch-repos] $name already present, skipping."
         return
     fi
+    local reason="not found"
+    [ -n "$describe_fn" ] && reason="$(eval "$describe_fn")"
     local answer="n"
     if [ "$ASSUME_YES" -eq 1 ]; then
         answer="y"
     else
-        read -p "$name not found. Install it now? [y/N] " answer
+        read -p "$name: $reason. Install it now? [y/N] " answer
     fi
     case "$answer" in
         y|Y|yes|Yes)
@@ -90,6 +92,7 @@ for name in "${submodule_names[@]}"; do
                 ;;
         esac
     }
+    submodule_describe() { submodule_state "$1"; }
 
-    ensure_tool "submodule:$name" "submodule_check $name" "submodule_install $name"
+    ensure_tool "submodule:$name" "submodule_check $name" "submodule_install $name" "submodule_describe $name"
   done
